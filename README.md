@@ -1,4 +1,4 @@
-# FormicaX: A Rust-Based Stock Trading Prediction Library
+# FormicaX: Rust-Based Clustering Library for Stock Market Analysis.
 
 ![FormicaX Logo](https://github.com/rustic-ml/FormicaX/blob/main/FormicaX.png)
 
