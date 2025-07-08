@@ -1,8 +1,19 @@
 # FormicaX: A Rust-Based Stock Trading Prediction Library
 
+![FormicaX Logo](https://github.com/rustic-ml/FormicaX/blob/main/FormicaX.png)
+
 ## Overview
 
-FormicaX is a high-performance, Rust-based library designed for stock market analysis and prediction using OHLCV (Open, High, Low, Close, Volume) data. Leveraging Rust's safety and speed, FormicaX implements advanced machine learning clustering algorithms to generate predictive insights for stock trading. The library is tailored for developers and data scientists building trading applications or conducting financial research.
+[FormicaX](https://github.com/rustic-ml/FormicaX) is a high-performance, Rust-based library designed for stock market analysis and prediction using OHLCV (Open, High, Low, Close, Volume) data. Leveraging Rust's safety and speed, FormicaX implements advanced machine learning clustering algorithms to generate predictive insights for stock trading. The library is tailored for developers and data scientists building trading applications or conducting financial research.
+
+The name **FormicaX**, derived from "Formica" (Latin for ant), reflects the library's design principles:
+- **Collaboration**: Like ants in a colony, FormicaX's algorithms work together to process data efficiently.
+- **Adaptability**: Ants adapt to complex environments; FormicaX adapts to diverse market patterns.
+- **Resilience**: Ant colonies are robust; FormicaX handles large datasets with Rust's performance.
+- **Exploration**: Ants explore for resources; FormicaX uncovers hidden patterns in data.
+- **Simplicity**: Individual ants are simple, yet powerful collectively; FormicaX offers a modular, user-friendly API.
+
+The "X" signifies excellence, exploration, and extensibility, highlighting the library’s advanced and flexible capabilities.
 
 Supported clustering algorithms:
 - **K-Means Clustering**: Partitions data into K clusters by minimizing variance within clusters.
@@ -42,7 +53,7 @@ FormicaX processes large datasets efficiently, making it suitable for real-time 
    cargo build --release
    ```
 
-3. Add FormicaX as a dependency in your `Cargo.toml`:
+3. Add [FormicaX](https://github.com/rustic-ml/FormicaX) as a dependency in your `Cargo.toml`:
    ```toml
    [dependencies]
    formica_x = { path = "./FormicaX" }
@@ -128,7 +139,7 @@ See [API documentation](#api-documentation) for details.
 - **Self-Organizing Maps (SOM)**: Visualizes patterns via 2D mapping.
 
 ## Building a Trading Strategy
-Integrate FormicaX into a trading pipeline:
+Integrate [FormicaX](https://github.com/rustic-ml/FormicaX) into a trading pipeline:
 1. **Preprocess**: Normalize data using `Preprocessor`.
 2. **Cluster**: Apply clustering algorithms.
 3. **Predict**: Assign new data to clusters.
