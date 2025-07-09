@@ -4,38 +4,54 @@
 
 ### Overview
 
-FormicaX is designed as a modular, high-performance financial data analysis library with a focus on OHLCV data processing and VWAP calculations.
+FormicaX is designed as a modular, high-performance clustering library with a focus on financial data analysis using OHLCV data and advanced clustering algorithms.
 
 ### Core Architecture
 
 #### 1. Data Layer
-- **DataReader**: Handles CSV file parsing and data validation
+- **DataLoader**: Handles CSV file parsing and data validation
 - **DataValidator**: Ensures data integrity and format compliance
 - **DataTransformer**: Converts between different data formats
 
-#### 2. Processing Layer
-- **OHLCVProcessor**: Core OHLCV data processing engine
-- **VWAPCalculator**: Volume Weighted Average Price calculations
-- **TechnicalIndicators**: Common technical analysis indicators
+#### 2. Common Traits and Interfaces
+- **ClusteringAlgorithm**: Unified trait for all clustering algorithms
+- **ClusteringConfig**: Builder pattern for algorithm configuration
+- **DistanceMetric**: Pluggable distance functions with SIMD optimization
+- **Initialization**: Common initialization strategies (K-means++, random, etc.)
+- **Convergence**: Unified convergence criteria across algorithms
 
-#### 3. Analysis Layer
-- **DataAnalyzer**: Statistical analysis and pattern recognition
-- **PerformanceMetrics**: Risk and performance calculations
-- **ReportGenerator**: Data visualization and reporting
+#### 3. Clustering Layer (Modular Design)
+- **KMeans Module**: Lloyd's, Elkan's, Hamerly's, and Mini-batch variants
+- **DBSCAN Module**: Standard, parallel, incremental, and approximate variants
+- **GMM Module**: Standard EM, Variational Bayes, and robust variants
+- **Hierarchical Module**: Agglomerative methods with multiple linkage options
+- **AffinityPropagation Module**: Standard and hierarchical message passing
+- **SOM Module**: Standard, growing, and hierarchical self-organizing maps
+
+#### 4. Performance Layer
+- **SIMD Operations**: Vectorized distance calculations and matrix operations
+- **Memory Management**: Zero-copy, memory pooling, and streaming
+- **Parallel Processing**: Lock-free concurrent algorithms with work-stealing
+
+#### 5. Analysis Layer
+- **ClusterAnalyzer**: Statistical analysis and pattern recognition
+- **ValidationMetrics**: Unified clustering quality metrics
+- **Predictor**: Ensemble prediction with confidence estimation
+- **Visualization**: Cluster visualization and dimensionality reduction
 
 ### Data Flow
 
 ```
-CSV Input → DataReader → DataValidator → OHLCVProcessor → VWAPCalculator → Analysis → Output
+CSV Input → DataLoader → DataValidator → Clustering Algorithm → ClusterAnalyzer → Predictions
 ```
 
 ### Key Design Principles
 
-1. **Modularity**: Each component is self-contained and replaceable
+1. **Modularity**: Each clustering algorithm is self-contained and replaceable
 2. **Performance**: Optimized for large financial datasets
-3. **Accuracy**: Precise calculations with minimal floating-point errors
-4. **Extensibility**: Easy to add new indicators and analysis methods
-5. **Validation**: Comprehensive data validation and error handling
+3. **Accuracy**: Precise clustering with maximum accuracy implementations
+4. **Extensibility**: Easy to add new clustering algorithms
+5. **Validation**: Comprehensive clustering validation and error handling
 
 ## Project Configuration
 
@@ -43,24 +59,23 @@ CSV Input → DataReader → DataValidator → OHLCVProcessor → VWAPCalculator
 
 ```toml
 [package]
-name = "formicax"
+name = "formica_x"
 version = "0.1.0"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
-description = "High-performance Rust library for financial data analysis with OHLCV and VWAP calculations"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/formicax"
-documentation = "https://docs.rs/formicax"
+description = "High-performance Rust clustering library for financial data analysis"
+license = "Apache-2.0"
+repository = "https://github.com/yourusername/formica_x"
+documentation = "https://docs.rs/formica_x"
 readme = "README.md"
-keywords = ["finance", "trading", "ohlcv", "vwap", "technical-analysis", "financial-data"]
-categories = ["data-structures", "science", "financial"]
+keywords = ["clustering", "machine-learning", "finance", "ohlcv", "trading"]
+categories = ["data-structures", "science", "financial", "machine-learning"]
 
 [dependencies]
 # Core dependencies
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
-rust_decimal = { version = "1.32", features = ["serde"] }
 
 # CSV and data processing
 csv = "1.3"
@@ -118,11 +133,11 @@ lto = true
 codegen-units = 1
 
 [[bench]]
-name = "vwap_benchmark"
+name = "kmeans_benchmark"
 harness = false
 
 [[bench]]
-name = "csv_parsing_benchmark"
+name = "dbscan_benchmark"
 harness = false
 
 [package.metadata.docs.rs]
@@ -160,29 +175,56 @@ src/
 ├── core/
 │   ├── mod.rs
 │   ├── data_models.rs
-│   ├── data_reader.rs
-│   └── data_validator.rs
-├── processing/
-│   ├── mod.rs
-│   ├── ohlcv_processor.rs
-│   └── vwap_calculator.rs
+│   ├── data_loader.rs
+│   ├── data_validator.rs
+│   └── traits.rs                    # Common clustering traits
 ├── clustering/
 │   ├── mod.rs
-│   ├── kmeans.rs
-│   ├── dbscan.rs
-│   ├── gmm.rs
-│   ├── hierarchical.rs
-│   ├── affinity_propagation.rs
-│   ├── som.rs
-│   └── validation.rs
-├── indicators/
-│   ├── mod.rs
-│   ├── price_indicators.rs
-│   └── volume_indicators.rs
+│   ├── common/                      # Shared clustering components
+│   │   ├── mod.rs
+│   │   ├── distance.rs              # Distance metrics (SIMD optimized)
+│   │   ├── initialization.rs        # K-means++ and other initializers
+│   │   └── convergence.rs           # Convergence criteria
+│   ├── kmeans/                      # K-Means module
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # Core K-Means with Elkan's optimization
+│   │   ├── parallel.rs              # Parallel implementation
+│   │   └── config.rs                # Configuration and builder
+│   ├── dbscan/                      # DBSCAN module
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # Core DBSCAN with KD-tree
+│   │   ├── spatial.rs               # Spatial indexing structures
+│   │   └── config.rs                # Configuration and builder
+│   ├── gmm/                         # Gaussian Mixture Models
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # EM algorithm with numerical stability
+│   │   ├── covariance.rs            # Covariance matrix handling
+│   │   └── config.rs                # Configuration and builder
+│   ├── hierarchical/                # Hierarchical clustering
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # Linkage methods
+│   │   ├── dendrogram.rs            # Dendrogram operations
+│   │   └── config.rs                # Configuration and builder
+│   ├── affinity_propagation/        # Affinity Propagation
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # Message passing algorithm
+│   │   └── config.rs                # Configuration and builder
+│   ├── som/                         # Self-Organizing Maps
+│   │   ├── mod.rs
+│   │   ├── algorithm.rs             # SOM training algorithm
+│   │   ├── topology.rs              # Grid topology handling
+│   │   └── config.rs                # Configuration and builder
+│   └── validation.rs                # Clustering validation metrics
 ├── analysis/
 │   ├── mod.rs
-│   ├── data_analyzer.rs
-│   └── performance_metrics.rs
+│   ├── cluster_analyzer.rs
+│   ├── predictor.rs
+│   └── ensemble.rs                  # Ensemble clustering methods
+├── performance/                     # Performance optimization utilities
+│   ├── mod.rs
+│   ├── simd.rs                      # SIMD operations
+│   ├── memory.rs                    # Memory management
+│   └── parallel.rs                  # Parallel processing utilities
 └── utils/
     ├── mod.rs
     ├── helpers.rs
@@ -194,22 +236,24 @@ src/
 ### Phase 1: Project Setup and Core Infrastructure (Weeks 1-2)
 
 #### 1.1 Project Initialization
-- [ ] Initialize Rust project with `cargo new formicax --lib`
-- [ ] Set up `Cargo.toml` with dependencies
-- [ ] Configure workspace structure
-- [ ] Set up development tools (rustfmt, clippy, cargo-audit)
+- [ ] Initialize Rust project with workspace structure
+- [ ] Set up `Cargo.toml` with optimized dependencies and features
+- [ ] Configure modular workspace with separate crates for algorithms
+- [ ] Set up development tools (rustfmt, clippy, cargo-audit, criterion)
 
-#### 1.2 Core Data Structures
-- [ ] Define `OHLCV` struct with Serde derive macros
-- [ ] Implement `Timestamp` type using `chrono`
-- [ ] Create `DataPoint` enum for different data types
-- [ ] Add validation traits and implementations
+#### 1.2 Core Traits and Interfaces
+- [ ] Define `ClusteringAlgorithm` trait with unified interface
+- [ ] Implement `DistanceMetric` trait with SIMD support
+- [ ] Create `ClusteringConfig` trait for builder patterns
+- [ ] Add `Convergence` trait for stopping criteria
+- [ ] Define `Initialization` trait for centroid/exemplar initialization
 
-#### 1.3 Error Handling
-- [ ] Define custom error types using `thiserror`
-- [ ] Implement `From` traits for error conversion
-- [ ] Add context-aware error messages
-- [ ] Create error recovery strategies
+#### 1.3 Core Data Structures and Error Handling
+- [ ] Define `OHLCV` struct with efficient memory layout
+- [ ] Implement `ClusterResult` with metadata and quality metrics
+- [ ] Create comprehensive error hierarchy using `thiserror`
+- [ ] Add zero-cost abstractions for performance-critical paths
+- [ ] Implement streaming data structures for large datasets
 
 ### Phase 2: Data Loading and Validation (Weeks 3-4)
 
@@ -232,167 +276,186 @@ src/
 - [ ] Create data cleaning functions
 - [ ] Implement data aggregation methods
 
-### Phase 3: VWAP Implementation (Weeks 5-6)
+### Phase 3: Common Clustering Infrastructure (Weeks 5-6)
 
-#### 3.1 Core VWAP Calculation
-- [ ] Implement standard VWAP formula
-- [ ] Add rolling VWAP with configurable periods
-- [ ] Create VWAP-based indicators
-- [ ] Optimize for performance with SIMD
+#### 3.1 Shared Components
+- [ ] Implement SIMD-optimized distance metrics (Euclidean, Manhattan, Cosine)
+- [ ] Create K-means++ initialization with parallel seeding
+- [ ] Build convergence monitoring system with multiple criteria
+- [ ] Implement memory-efficient spatial data structures
 
-#### 3.2 Advanced VWAP Features
-- [ ] Implement anchored VWAP
-- [ ] Add session-based VWAP calculations
-- [ ] Create custom VWAP periods
-- [ ] Add VWAP deviation indicators
+#### 3.2 Performance Infrastructure
+- [ ] Create SIMD operation wrappers for vectorized calculations
+- [ ] Implement memory pooling system for cluster data
+- [ ] Build lock-free parallel processing utilities
+- [ ] Create streaming data processing framework
 
-### Phase 4: Clustering Algorithms (Weeks 7-8)
+### Phase 4: K-Means Implementation (Weeks 7-8)
 
-#### 4.1 K-Means Implementation
-- [ ] Implement K-Means++ initialization for optimal centroid placement
-- [ ] Add Elkan's optimization algorithm for faster convergence
-- [ ] Implement multiple initialization runs with best result selection
-- [ ] Add convergence monitoring with early stopping
+#### 4.1 K-Means Variants
+- [ ] Implement Lloyd's algorithm with SIMD optimization
+- [ ] Add Elkan's algorithm with triangle inequality optimization
+- [ ] Implement Hamerly's algorithm for memory efficiency
+- [ ] Create Mini-batch K-means for streaming data
 
-#### 4.2 DBSCAN Implementation
-- [ ] Implement KD-tree for efficient nearest neighbor searches
-- [ ] Add adaptive epsilon calculation based on data distribution
-- [ ] Implement proper border point classification
-- [ ] Add robust noise detection with statistical validation
+#### 4.2 K-Means Advanced Features
+- [ ] Add intelligent initialization selection
+- [ ] Implement adaptive convergence criteria
+- [ ] Create parallel processing with work-stealing
+- [ ] Add cluster quality assessment and validation
 
-#### 4.3 GMM Implementation
-- [ ] Implement Expectation-Maximization algorithm with numerical stability
-- [ ] Add covariance regularization to prevent singular matrices
-- [ ] Implement k-means++ initialization for component placement
-- [ ] Add BIC/AIC model selection for optimal component count
+### Phase 5: DBSCAN Implementation (Weeks 9-10)
 
-### Phase 5: Advanced Clustering (Weeks 9-10)
+#### 5.1 DBSCAN Core Algorithm
+- [ ] Implement standard DBSCAN with KD-tree spatial indexing
+- [ ] Add R*-tree support for complex spatial queries
+- [ ] Implement efficient border point classification
+- [ ] Create robust noise detection with statistical validation
 
-#### 5.1 Hierarchical Clustering
-- [ ] Implement all linkage methods (single, complete, average, Ward)
-- [ ] Add optimized distance matrix calculations
-- [ ] Implement memory-efficient algorithms for large datasets
-- [ ] Add dendrogram cutting methods and validation metrics
+#### 5.2 DBSCAN Advanced Variants
+- [ ] Implement parallel DBSCAN with lock-free region queries
+- [ ] Add incremental DBSCAN for streaming data
+- [ ] Create approximate DBSCAN for large-scale data
+- [ ] Implement adaptive epsilon calculation with k-distance graph
 
-#### 5.2 Affinity Propagation & SOM
-- [ ] Implement Affinity Propagation with adaptive damping
-- [ ] Add Self-Organizing Maps with multiple neighborhood functions
-- [ ] Implement batch training for faster convergence
-- [ ] Add quality measures and validation metrics
+### Phase 6: Advanced Clustering Algorithms (Weeks 11-12)
 
-### Phase 6: Technical Indicators (Weeks 11-12)
+#### 6.1 Gaussian Mixture Models
+- [ ] Implement numerically stable EM algorithm with log-space computations
+- [ ] Add Variational Bayesian GMM with automatic component selection
+- [ ] Implement multiple covariance types (diagonal, full, tied)
+- [ ] Create online EM for streaming data with concept drift handling
+- [ ] Add robust GMM variants using t-distributions
 
-#### 6.1 Price-based Indicators
-- [ ] Implement moving averages (SMA, EMA, WMA)
-- [ ] Add Bollinger Bands calculation
-- [ ] Create RSI, MACD, Stochastic oscillators
-- [ ] Implement price momentum indicators
+#### 6.2 Hierarchical Clustering
+- [ ] Implement SLINK/CLINK algorithms for linear-time linkage
+- [ ] Add optimized linkage methods with SIMD acceleration
+- [ ] Create memory-efficient union-find data structures
+- [ ] Implement parallel hierarchical clustering
+- [ ] Add BIRCH-style clustering trees for massive datasets
 
-#### 6.2 Volume-based Indicators
-- [ ] Add volume profile analysis
-- [ ] Implement On-balance volume (OBV)
-- [ ] Create volume rate of change
-- [ ] Add volume-weighted indicators
+### Phase 7: Specialized Clustering Algorithms (Weeks 13-14)
 
-### Phase 5: Performance Optimization (Weeks 9-10)
+#### 7.1 Affinity Propagation
+- [ ] Implement message passing with adaptive damping
+- [ ] Add sparse similarity matrix operations for scalability
+- [ ] Create parallel responsibility and availability updates
+- [ ] Implement convergence acceleration with momentum methods
+- [ ] Add hierarchical affinity propagation for multi-scale clustering
 
-#### 5.1 Memory Management
-- [ ] Implement zero-copy data structures
-- [ ] Add memory pooling for calculations
-- [ ] Optimize data layout for cache efficiency
-- [ ] Implement lazy evaluation where appropriate
+#### 7.2 Self-Organizing Maps
+- [ ] Implement SOM with advanced neighborhood functions
+- [ ] Add multiple learning rate schedules (exponential, polynomial, adaptive)
+- [ ] Support multi-grid topologies (hexagonal, cylindrical, toroidal)
+- [ ] Create growing SOM with dynamic grid expansion
+- [ ] Implement hierarchical SOM for complex data structures
 
-#### 5.2 Parallel Processing
-- [ ] Add parallel data processing using `rayon`
-- [ ] Implement concurrent VWAP calculations
-- [ ] Create thread-safe data structures
-- [ ] Add parallel file I/O operations
+### Phase 8: Analysis and Ensemble Methods (Weeks 15-16)
 
-#### 5.3 SIMD Optimization
-- [ ] Use `ndarray` for vectorized operations
-- [ ] Implement SIMD-optimized calculations
-- [ ] Add CPU feature detection
-- [ ] Create fallback implementations
+#### 8.1 Unified Analysis Framework
+- [ ] Implement comprehensive clustering validation metrics
+- [ ] Create cluster quality assessment with multiple criteria
+- [ ] Add cluster stability analysis across parameter ranges
+- [ ] Implement automated clustering algorithm selection
 
-### Phase 6: API Design and Documentation (Weeks 11-12)
+#### 8.2 Ensemble and Prediction Systems
+- [ ] Create ensemble clustering with consensus methods
+- [ ] Implement cluster prediction with confidence estimation
+- [ ] Add active learning for clustering improvement
+- [ ] Create cluster visualization and interpretation tools
 
-#### 6.1 Public API
-- [ ] Design ergonomic public interface
-- [ ] Implement builder patterns for complex operations
-- [ ] Add fluent API for chaining operations
-- [ ] Create async/await support where beneficial
+### Phase 9: Testing, Optimization, and Documentation (Weeks 17-18)
 
-#### 6.2 Documentation
-- [ ] Write comprehensive API documentation
-- [ ] Add code examples and tutorials
-- [ ] Create performance benchmarks
-- [ ] Document best practices
-
-### Phase 7: Testing and Quality Assurance
-
-#### 7.1 Unit Testing
-- [ ] Write unit tests for all modules
+#### 8.1 Unit Testing
+- [ ] Write unit tests for all clustering algorithms
 - [ ] Add property-based testing with `proptest`
 - [ ] Implement integration tests
 - [ ] Add performance regression tests
+- [ ] Achieve > 95% code coverage for all public interfaces
+- [ ] Test all error conditions and edge cases
 
-#### 7.2 Benchmarking
+#### 8.2 Benchmarking
 - [ ] Set up benchmarks using `criterion`
-- [ ] Compare performance with other libraries
+- [ ] Compare performance with other clustering libraries
 - [ ] Profile memory usage
 - [ ] Optimize based on benchmark results
+
+#### 8.3 Documentation and Examples
+- [ ] Create comprehensive examples for all external interfaces
+- [ ] Use CSV files from `examples/csv/` folder in all examples
+- [ ] Place all examples in `examples/` folder with clear structure
+- [ ] Ensure each public API has working code examples
+- [ ] Include examples for error handling and edge cases
 
 ## Most Efficient Implementation Approaches
 
 ### Research-Based Optimizations
 
-Based on analysis of high-performance Rust financial libraries and trading systems:
+Based on analysis of high-performance Rust clustering libraries:
 
 ### Clustering Algorithm Accuracy Optimizations
 
 For maximum accuracy in clustering algorithms, FormicaX implements the following research-based optimizations:
 
-#### 1. K-Means Clustering - Maximum Accuracy
-- **K-Means++ Initialization**: Use k-means++ for optimal initial centroid placement
-- **Elkan's Algorithm**: Implement Elkan's optimization for faster convergence with triangle inequality
-- **Multiple Initializations**: Run with different random seeds and select best result
-- **Convergence Criteria**: Use relative change in objective function < 1e-8
-- **Early Stopping**: Implement early stopping with patience to prevent overfitting
+#### 1. K-Means Clustering - State-of-the-Art Implementation
+- **K-Means++ Initialization**: Use k-means++ for optimal initial centroid placement with parallel seeding
+- **Elkan's Algorithm**: Implement Elkan's triangle inequality optimization for 3-5x speedup
+- **Hamerly's Algorithm**: Alternative to Elkan's with lower memory overhead for high-dimensional data
+- **Mini-Batch K-Means**: For streaming/large datasets with configurable batch sizes
+- **Lloyd's Algorithm**: Classic implementation with SIMD-optimized distance calculations
+- **Convergence Criteria**: Multiple criteria - relative change < 1e-8, centroid movement, iteration limit
+- **Adaptive Tolerance**: Dynamic convergence tolerance based on data characteristics
+- **Parallel Processing**: Lock-free parallel implementation using work-stealing
 
-#### 2. DBSCAN - Density-Based Accuracy
-- **KD-Tree Optimization**: Use KD-tree for efficient nearest neighbor searches
-- **Adaptive Epsilon**: Implement adaptive epsilon calculation based on data distribution
-- **Border Point Handling**: Properly classify border points for accurate cluster boundaries
-- **Noise Detection**: Robust noise detection with statistical validation
-- **Parameter Tuning**: Automatic parameter estimation using knee method
+#### 2. DBSCAN - High-Performance Density Clustering
+- **Spatial Indexing**: Multi-level approach - KD-tree for low dimensions, LSH for high dimensions
+- **R*-Tree Integration**: For complex spatial queries and range searches
+- **Parallel DBSCAN**: Lock-free parallel region queries with atomic cluster assignment
+- **Adaptive Epsilon**: Auto-tuning using k-distance graph and knee detection
+- **Border Point Optimization**: Efficient border point classification with early termination
+- **Memory-Efficient**: Streaming implementation for datasets larger than memory
+- **Incremental DBSCAN**: Support for data stream processing with cluster evolution
+- **Approximate DBSCAN**: Trade-off precision for speed in large-scale scenarios
 
-#### 3. Gaussian Mixture Models (GMM) - Probabilistic Accuracy
-- **EM Algorithm**: Implement Expectation-Maximization with numerical stability
-- **Covariance Regularization**: Add regularization to prevent singular covariance matrices
-- **Component Initialization**: Use k-means++ for initial component placement
-- **Convergence Monitoring**: Track log-likelihood with relative tolerance < 1e-6
-- **Model Selection**: Use BIC/AIC for optimal component count selection
+#### 3. Gaussian Mixture Models (GMM) - Advanced Probabilistic Clustering
+- **Numerically Stable EM**: Log-space computations to prevent underflow in high dimensions
+- **Variational Bayesian GMM**: Automatic component count selection with regularization
+- **Diagonal/Full/Tied Covariance**: Multiple covariance types with adaptive selection
+- **Online EM**: Streaming EM algorithm for large datasets with concept drift handling
+- **Robust GMM**: Outlier-resistant variants using t-distributions or trimmed likelihood
+- **Parallel EM**: Distributed E-step and M-step computation with data parallelism
+- **Model Selection**: Integrated BIC/AIC/ICL with cross-validation for robust selection
+- **Initialization Strategies**: Smart initialization using k-means++, random, and spectral methods
 
-#### 4. Hierarchical Clustering - Linkage Accuracy
-- **Efficient Linkage**: Implement all linkage methods (single, complete, average, Ward)
-- **Distance Matrix Optimization**: Use optimized distance matrix calculations
-- **Memory-Efficient**: Implement memory-efficient algorithms for large datasets
-- **Cutoff Criteria**: Provide multiple dendrogram cutting methods
-- **Validation Metrics**: Include cophenetic correlation for quality assessment
+#### 4. Hierarchical Clustering - Scalable Agglomerative Methods
+- **Optimized Linkage Methods**: Single, complete, average, Ward, and centroid linkage with SIMD
+- **SLINK/CLINK Algorithms**: Linear-time single/complete linkage for efficiency
+- **Memory-Efficient Union-Find**: Disjoint set data structure for large-scale clustering
+- **Parallel Hierarchical**: Multi-threaded distance matrix computation and merging
+- **Approximate Methods**: BIRCH-style clustering trees for massive datasets
+- **Dynamic Programming**: Optimal dendrogram cutting with multiple criteria
+- **Streaming Hierarchical**: Online agglomerative clustering for data streams
+- **Quality Metrics**: Cophenetic correlation, silhouette analysis, and cluster stability
 
-#### 5. Affinity Propagation - Exemplar Accuracy
-- **Damping Factor**: Implement adaptive damping for convergence stability
-- **Preference Calculation**: Use median of similarities as default preference
-- **Convergence Criteria**: Monitor message changes with tolerance < 1e-6
-- **Early Termination**: Implement early termination for efficiency
-- **Exemplar Validation**: Validate exemplar quality with silhouette analysis
+#### 5. Affinity Propagation - Advanced Message Passing
+- **Adaptive Damping**: Dynamic damping factor adjustment based on oscillation detection
+- **Sparse Similarity Matrix**: Memory-efficient sparse matrix operations for large datasets
+- **Parallel Message Passing**: Lock-free parallel responsibility and availability updates
+- **Multiple Preference Strategies**: Median, quantile-based, and input preferences
+- **Convergence Acceleration**: Momentum-based and Nesterov acceleration methods
+- **Hierarchical AP**: Multi-level affinity propagation for scalability
+- **Robust Exemplar Selection**: Stability-based exemplar validation and refinement
+- **Early Stopping**: Intelligent termination with oscillation and plateau detection
 
-#### 6. Self-Organizing Maps (SOM) - Neural Accuracy
-- **Neighborhood Functions**: Implement Gaussian and bubble neighborhood functions
-- **Learning Rate Decay**: Use exponential decay for stable convergence
-- **Grid Topology**: Support hexagonal and rectangular grid topologies
-- **Batch Training**: Implement batch SOM for faster convergence
-- **Quality Measures**: Include quantization error and topographic error metrics
+#### 6. Self-Organizing Maps (SOM) - Modern Neural Clustering
+- **Advanced Neighborhood Functions**: Gaussian, bubble, Mexican hat, and adaptive neighborhoods
+- **Learning Rate Schedules**: Exponential, polynomial, and adaptive decay strategies
+- **Multi-Grid Topologies**: Hexagonal, rectangular, cylindrical, and toroidal grids
+- **Parallel SOM**: Multi-threaded BMU search and weight updates with vectorization
+- **Growing SOM**: Dynamic grid expansion based on quantization error thresholds
+- **Hierarchical SOM**: Multi-level SOMs for complex data structure discovery
+- **Batch/Online Hybrid**: Optimal batch size selection for convergence and speed
+- **Advanced Metrics**: Quantization error, topographic error, and trustworthiness measures
 
 #### 1. Zero-Copy Data Processing
 - **Memory Mapping**: Use `memmap2` for direct file access without copying data into memory
@@ -400,19 +463,28 @@ For maximum accuracy in clustering algorithms, FormicaX implements the following
 - **Streaming Parsers**: Parse CSV data in chunks to minimize memory footprint
 
 #### 2. SIMD-Optimized Calculations
-- **Vectorized VWAP**: Use AVX2/AVX-512 instructions for 8x-16x speedup on price/volume operations
-- **Batch Processing**: Process multiple OHLCV records simultaneously using SIMD lanes
-- **Aligned Memory**: Ensure data structures are aligned to cache lines for optimal SIMD performance
+- **Auto-Vectorization**: Use compiler intrinsics with runtime CPU feature detection
+- **AVX-512/AVX2 Support**: Vectorized distance calculations with 16x/8x parallel processing
+- **FMA Operations**: Fused multiply-add for improved precision and performance
+- **Horizontal Operations**: Efficient reduction operations for aggregated calculations
+- **Memory Alignment**: 64-byte aligned data structures for optimal cache and SIMD performance
+- **Portable SIMD**: Fallback implementations for different CPU architectures
 
 #### 3. Lock-Free Concurrency
-- **Crossbeam Channels**: Use lock-free channels for producer-consumer patterns
-- **DashMap**: Concurrent hash maps for shared state without locks
-- **Atomic Operations**: Use atomic types for counters and flags
+- **Work-Stealing Scheduler**: Rayon-based work distribution with minimal overhead
+- **Lock-Free Data Structures**: Crossbeam channels, DashMap, and atomic collections
+- **Compare-and-Swap Loops**: Atomic updates for cluster assignments and centroids
+- **Memory Ordering**: Optimized memory ordering for different access patterns
+- **NUMA Awareness**: Thread and memory locality optimization for multi-socket systems
+- **Parallel Iterators**: Zero-cost parallel abstractions with automatic load balancing
 
 #### 4. Cache-Optimized Data Layout
-- **Structure of Arrays (SoA)**: Store prices, volumes, and timestamps in separate arrays for better cache locality
-- **Cache Line Alignment**: Align structs to 64-byte boundaries
-- **Prefetching**: Use CPU prefetch instructions for predictable access patterns
+- **Structure of Arrays (SoA)**: Separate arrays for each feature dimension with optimal stride
+- **Cache Line Alignment**: 64-byte aligned data structures with padding elimination
+- **Prefetching Strategies**: Software and hardware prefetching for predictable access patterns
+- **Memory Hierarchy Optimization**: L1/L2/L3 cache-aware data organization
+- **False Sharing Elimination**: Padding and alignment to prevent cache line contention
+- **Temporal Locality**: Data layout optimized for access patterns in clustering algorithms
 
 #### 5. High-Performance CSV Parsing
 - **Flexible Column Detection**: Use hash maps for O(1) column name matching
@@ -423,24 +495,24 @@ For maximum accuracy in clustering algorithms, FormicaX implements the following
 
 ### Memory Management
 - **Memory Mapping**: Use `memmap2` for zero-copy file access to large datasets
-- **Memory Pooling**: Implement object pools for OHLCV structs to avoid allocation overhead
+- **Memory Pooling**: Implement object pools for clustering data structures to avoid allocation overhead
 - **Cache Optimization**: Structure of Arrays (SoA) layout for better cache locality and SIMD operations
 - **Lazy Loading**: Load data on-demand with intelligent prefetching
 - **Arena Allocation**: Use bump allocators for temporary calculations
 
 ### Calculation Speed
-- **SIMD Vectorization**: Use `ndarray` with AVX2/AVX-512 for 8x-16x speedup on price/volume calculations
+- **SIMD Vectorization**: Use `ndarray` with AVX2/AVX-512 for 8x-16x speedup on distance calculations
 - **Lock-Free Parallelism**: Use `crossbeam` channels and `dashmap` for concurrent data structures
-- **Incremental Updates**: Update VWAP incrementally with rolling window optimizations
+- **Incremental Updates**: Update clusters incrementally with rolling window optimizations
 - **Branch Prediction**: Use `likely!`/`unlikely!` hints and profile-guided optimization
 - **CPU Cache Optimization**: Align data structures to cache lines and use prefetching
 
 ### Accuracy
-- **Fixed-Point Arithmetic**: Use `rust_decimal` for precise financial calculations without floating-point errors
+- **Numerical Precision**: Use double-precision floating point for clustering calculations
 - **Error Handling**: Comprehensive validation with `thiserror` and context-aware error messages
 - **Data Integrity**: Ensure logical consistency of OHLCV data with runtime checks
 - **Precision Control**: Configurable precision with compile-time guarantees
-- **Numerical Stability**: Use Kahan summation for VWAP calculations to prevent accumulation errors
+- **Numerical Stability**: Use Kahan summation for distance calculations to prevent accumulation errors
 
 ### Clustering Accuracy
 - **Numerical Precision**: Use double-precision floating point for clustering calculations
@@ -451,13 +523,26 @@ For maximum accuracy in clustering algorithms, FormicaX implements the following
 
 ## Success Metrics
 
-1. **Performance**: Process 1GB CSV file in < 5 seconds with memory mapping
-2. **Memory**: Use < 1.5x memory of input file size with streaming
-3. **Accuracy**: VWAP calculations within 0.0001% of reference implementation using fixed-point arithmetic
-4. **Safety**: Zero unsafe code blocks with comprehensive error handling
-5. **Coverage**: > 95% test coverage with property-based testing
-6. **Scalability**: Linear scaling with CPU cores for parallel operations
-7. **Latency**: Sub-microsecond VWAP calculations with SIMD optimization
+### Performance Targets
+1. **Throughput**: Process 1GB CSV file in < 5 seconds with streaming and SIMD
+2. **Memory Efficiency**: Use < 1.5x memory of input file size with zero-copy operations
+3. **Latency**: Sub-100 microsecond clustering predictions with optimized algorithms
+4. **Scalability**: Near-linear scaling with CPU cores (>85% efficiency)
+
+### Quality and Accuracy
+5. **Algorithm Accuracy**: Clustering quality within 0.5% of reference implementations
+6. **Numerical Stability**: Robust convergence across diverse datasets and parameters
+7. **Reproducibility**: Deterministic results with configurable random seeds
+
+### Code Quality
+8. **Safety**: Zero unsafe code with comprehensive error handling and validation
+9. **Coverage**: > 95% test coverage with property-based and integration testing
+10. **Modularity**: Clean separation of concerns with reusable components
+
+### Documentation and Usability
+11. **API Coverage**: 100% of external interfaces with working examples using `examples/csv/` data
+12. **Examples**: Comprehensive examples in `examples/` folder with clear documentation
+13. **Performance**: Detailed benchmarks and optimization guides
 
 ### Clustering Algorithm Accuracy Targets
 
@@ -494,8 +579,368 @@ For maximum accuracy in clustering algorithms, FormicaX implements the following
 ## Development Setup
 
 1. **Install Rust**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-2. **Install tools**: `cargo install cargo-audit cargo-tarpaulin`
+2. **Install tools**: `cargo install cargo-audit cargo-tarpaulin cargo-update`
 3. **Setup pre-commit**: Configure git hooks for code quality
 4. **Run tests**: `cargo test --all-features`
 5. **Run benchmarks**: `cargo bench`
-6. **Check code quality**: `cargo clippy --all-targets --all-features` 
+6. **Check code quality**: `cargo clippy --all-targets --all-features`
+7. **Check coverage**: `cargo tarpaulin --out Html --output-dir coverage`
+8. **Run examples**: `cargo run --example <example_name>`
+9. **Update dependencies**: `cargo update` (run regularly)
+
+## Cursor Implementation Rules
+
+### 🎯 **Project Ethos Enforcement**
+
+When implementing any feature or component, **ALWAYS** follow these mandatory rules:
+
+#### 1. **Code Coverage First (MANDATORY)**
+```bash
+# BEFORE implementing any feature:
+cargo tarpaulin --out Html --output-dir coverage
+
+# AFTER implementing:
+cargo tarpaulin --out Html --output-dir coverage
+# Verify: > 95% coverage for new code
+```
+
+**Implementation Checklist:**
+- [ ] Write unit tests BEFORE implementing the feature
+- [ ] Add integration tests for public APIs
+- [ ] Include property-based tests with `proptest`
+- [ ] Test all error conditions and edge cases
+- [ ] Verify coverage > 95% for new code
+- [ ] Add benchmarks for performance-critical code
+
+#### 2. **Stop and Review (MANDATORY)**
+After implementing any significant feature:
+
+**Review Checklist:**
+- [ ] **Code Coverage**: Run `cargo tarpaulin` and verify > 95%
+- [ ] **No Duplication**: Check for code duplication using `cargo clippy`
+- [ ] **Modularity**: Ensure clean separation of concerns
+- [ ] **Readability**: Code is self-documenting with clear naming
+- [ ] **Performance**: Run benchmarks and verify no regressions
+- [ ] **Documentation**: Update examples and documentation
+
+#### 3. **Latest Dependencies (MANDATORY)**
+```bash
+# Check for outdated dependencies
+cargo outdated
+
+# Update to latest versions
+cargo update
+
+# Verify compatibility
+cargo check --all-features
+cargo test --all-features
+```
+
+**Dependency Rules:**
+- [ ] Use latest stable versions from crates.io
+- [ ] No pinned versions unless absolutely necessary
+- [ ] Regular dependency updates (weekly)
+- [ ] Security audit: `cargo audit`
+- [ ] Verify no breaking changes after updates
+
+#### 4. **Clean, Modular Code (MANDATORY)**
+
+**Code Quality Standards:**
+```rust
+// ✅ GOOD: Clean, modular, testable
+pub trait ClusteringAlgorithm {
+    type Config;
+    fn fit(&mut self, data: &[OHLCV]) -> Result<ClusterResult, FormicaXError>;
+}
+
+// ✅ GOOD: Builder pattern for configuration
+pub struct KMeansConfig {
+    k: usize,
+    variant: KMeansVariant,
+    parallel: bool,
+}
+
+impl KMeansConfig {
+    pub fn builder() -> KMeansConfigBuilder {
+        KMeansConfigBuilder::default()
+    }
+}
+
+// ❌ BAD: Duplicated code, hard to test
+fn kmeans_algorithm(data: &[OHLCV], k: usize) -> Vec<usize> {
+    // 100 lines of inline algorithm
+}
+
+// ❌ BAD: Outdated dependencies
+[dependencies]
+serde = "1.0.100"  # Pinned old version
+```
+
+**Modularity Rules:**
+- [ ] **Single Responsibility**: Each module has one clear purpose
+- [ ] **Dependency Inversion**: Depend on abstractions, not concretions
+- [ ] **Interface Segregation**: Small, focused traits
+- [ ] **Open/Closed**: Open for extension, closed for modification
+- [ ] **DRY Principle**: No code duplication
+- [ ] **SOLID Principles**: Follow all SOLID design principles
+
+### 🔄 **Implementation Workflow**
+
+#### Phase 1: Planning
+1. **Define Requirements**: Clear, testable requirements
+2. **Design Interface**: Define traits and public APIs
+3. **Plan Tests**: Write test specifications first
+4. **Check Dependencies**: Ensure latest versions
+
+#### Phase 2: Implementation
+1. **Write Tests First**: TDD approach
+2. **Implement Feature**: Following clean code principles
+3. **Run Coverage**: Verify > 95% coverage
+4. **Code Review**: Self-review against checklist
+
+#### Phase 3: Validation
+1. **Run All Tests**: `cargo test --all-features`
+2. **Check Coverage**: `cargo tarpaulin`
+3. **Run Benchmarks**: `cargo bench`
+4. **Update Dependencies**: `cargo update`
+5. **Security Audit**: `cargo audit`
+
+#### Phase 4: Documentation
+1. **Update Examples**: Add working examples using `examples/csv/`
+2. **Update Documentation**: Keep docs in sync with code
+3. **Performance Notes**: Document performance characteristics
+4. **Migration Guide**: If breaking changes
+
+### 🛠️ **Development Tools Configuration**
+
+#### Pre-commit Hooks
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+echo "Running pre-commit checks..."
+
+# Check code coverage
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+
+# Check for outdated dependencies
+cargo outdated --exit-code 1
+
+# Run security audit
+cargo audit
+
+# Check code quality
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Run tests
+cargo test --all-features
+
+echo "All checks passed!"
+```
+
+#### CI/CD Pipeline
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      # Check for outdated dependencies
+      - name: Check outdated dependencies
+        run: cargo outdated --exit-code 1
+      
+      # Security audit
+      - name: Security audit
+        run: cargo audit
+      
+      # Run tests with coverage
+      - name: Test with coverage
+        run: cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+      
+      # Upload coverage report
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage/tarpaulin-report.html
+```
+
+### 📊 **Quality Metrics Dashboard**
+
+**Required Metrics for Every Implementation:**
+
+| Metric | Target | Tool | Frequency |
+|--------|--------|------|-----------|
+| **Code Coverage** | > 95% | `cargo tarpaulin` | Every commit |
+| **Dependency Freshness** | Latest stable | `cargo outdated` | Weekly |
+| **Security Issues** | 0 | `cargo audit` | Every commit |
+| **Code Quality** | 0 warnings | `cargo clippy` | Every commit |
+| **Performance** | No regression | `cargo bench` | Every PR |
+| **Documentation** | 100% API coverage | Manual review | Every PR |
+
+### 🚨 **Failure Modes and Recovery**
+
+#### Coverage Below 95%
+```bash
+# Identify uncovered code
+cargo tarpaulin --out Html --output-dir coverage
+
+# Add missing tests
+# Re-run until > 95%
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+```
+
+#### Outdated Dependencies
+```bash
+# Update dependencies
+cargo update
+
+# Check for breaking changes
+cargo check --all-features
+cargo test --all-features
+
+# If breaking changes, update code or pin version temporarily
+```
+
+#### Code Duplication
+```bash
+# Use clippy to detect duplication
+cargo clippy --all-targets --all-features
+
+# Refactor duplicated code into shared modules
+# Update tests to cover shared code
+```
+
+### 📝 **Implementation Templates**
+
+#### New Clustering Algorithm
+```rust
+// 1. Define trait implementation
+impl ClusteringAlgorithm for NewAlgorithm {
+    type Config = NewAlgorithmConfig;
+    
+    fn new(config: Self::Config) -> Self {
+        // Implementation
+    }
+    
+    fn fit(&mut self, data: &[OHLCV]) -> Result<ClusterResult, FormicaXError> {
+        // Implementation with comprehensive error handling
+    }
+}
+
+// 2. Write tests FIRST
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+    
+    #[test]
+    fn test_new_algorithm_basic() {
+        // Test implementation
+    }
+    
+    proptest! {
+        #[test]
+        fn test_new_algorithm_properties(data in generate_test_data()) {
+            // Property-based tests
+        }
+    }
+}
+
+// 3. Add benchmarks
+#[cfg(test)]
+mod benches {
+    use criterion::{black_box, criterion_group, criterion_main, Criterion};
+    
+    fn bench_new_algorithm(c: &mut Criterion) {
+        c.bench_function("new_algorithm", |b| {
+            b.iter(|| {
+                // Benchmark implementation
+            })
+        });
+    }
+}
+```
+
+#### New Module Structure
+```
+src/clustering/new_algorithm/
+├── mod.rs              # Public API and trait implementations
+├── algorithm.rs        # Core algorithm implementation
+├── config.rs           # Configuration and builder pattern
+├── parallel.rs         # Parallel implementation (if applicable)
+└── tests/              # Comprehensive test suite
+    ├── mod.rs
+    ├── unit_tests.rs
+    ├── integration_tests.rs
+    └── property_tests.rs
+```
+
+**Remember: These rules are MANDATORY and non-negotiable. Every implementation must follow this ethos to maintain the high quality standards of FormicaX.**
+
+## Examples and Documentation Requirements
+
+### Code Coverage Standards
+- **Minimum Coverage**: > 95% code coverage for all public interfaces
+- **Coverage Tools**: Use `cargo-tarpaulin` for coverage reporting
+- **Coverage Reports**: Generate HTML reports in `coverage/` directory
+- **Coverage CI**: Include coverage checks in CI/CD pipeline
+
+### Example Structure
+All examples must be placed in the `examples/` folder with the following structure:
+
+```
+examples/
+├── basic_usage/
+│   ├── data_loading.rs
+│   ├── kmeans_clustering.rs
+│   └── dbscan_clustering.rs
+├── advanced_usage/
+│   ├── streaming_processing.rs
+│   ├── parallel_clustering.rs
+│   └── custom_validation.rs
+├── clustering_algorithms/
+│   ├── kmeans_examples.rs
+│   ├── dbscan_examples.rs
+│   ├── gmm_examples.rs
+│   ├── hierarchical_examples.rs
+│   ├── affinity_propagation_examples.rs
+│   └── som_examples.rs
+├── data_processing/
+│   ├── csv_parsing.rs
+│   ├── data_validation.rs
+│   └── feature_engineering.rs
+└── csv/
+    ├── daily.csv
+    ├── hourly.csv
+    └── minute.csv
+```
+
+### Example Requirements
+- **CSV Data Source**: All examples must use CSV files from `examples/csv/` folder
+- **External Interfaces**: Every public API must have at least one working example
+- **Error Handling**: Include examples showing proper error handling
+- **Documentation**: Each example must have clear comments explaining the code
+- **Runnable**: All examples must compile and run successfully
+- **Realistic Data**: Use realistic financial data scenarios in examples
+
+### Example File Naming Convention
+- Use snake_case for example file names
+- Include the main functionality in the filename
+- Group related examples in subdirectories
+- Use descriptive names that indicate the example's purpose
+
+### Example Documentation Standards
+- **Header Comments**: Each example file must have a header explaining its purpose
+- **Inline Comments**: Include comments explaining complex operations
+- **Output Examples**: Show expected output where relevant
+- **Error Scenarios**: Demonstrate error handling with realistic scenarios
+- **Performance Notes**: Include performance considerations where applicable 

@@ -9,23 +9,50 @@
 **Strategy**: Use VWAP as a dynamic support/resistance level for intraday trades.
 
 ```rust
-use formicax::{VWAPCalculator, OHLCV, TradingStrategy};
+use formica_x::{
+    DataLoader,
+    trading::{VWAPCalculator, SignalGenerator, VWAPStrategy, StrategyConfig, VWAPType}
+};
 
 fn vwap_intraday_strategy() -> Result<(), Box<dyn std::error::Error>> {
-    let mut strategy = TradingStrategy::new()
-        .name("VWAP Intraday")
-        .timeframe(Timeframe::Minute(1));
+    // Load intraday data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let intraday_data = loader.load_csv()?;
     
-    // Calculate session VWAP
-    let vwap_calc = VWAPCalculator::session_based();
-    let session_vwap = vwap_calc.calculate(&intraday_data)?;
+    // Create VWAP calculator for session-based calculation
+    let mut vwap_calc = VWAPCalculator::session_based();
     
-    // Generate signals
-    for candle in &intraday_data {
-        if candle.close > session_vwap + threshold {
-            strategy.buy_signal(candle.timestamp, "Above VWAP");
-        } else if candle.close < session_vwap - threshold {
-            strategy.sell_signal(candle.timestamp, "Below VWAP");
+    // Create signal generator with custom thresholds
+    let mut signal_gen = SignalGenerator::with_thresholds(SignalThresholds {
+        vwap_buy_threshold: 0.001,   // 0.1% above VWAP
+        vwap_sell_threshold: 0.001,  // 0.1% below VWAP
+        volume_threshold: 1.5,       // 50% above average volume
+        price_change_threshold: 0.005, // 0.5% price change
+        min_confidence: 0.6,         // 60% minimum confidence
+    });
+    
+    // Process each candle
+    for ohlcv in &intraday_data {
+        // Calculate VWAP incrementally
+        let vwap_result = vwap_calc.calculate_incremental(&[ohlcv.clone()])?;
+        
+        // Generate trading signal
+        let signal = signal_gen.generate_signal_incremental(ohlcv)?;
+        
+        // Execute based on signal
+        match signal.signal_type {
+            SignalType::Buy { strength, reason } => {
+                println!("BUY: {} (strength: {:.3}, confidence: {:.2})", 
+                    reason, strength, signal.confidence);
+            }
+            SignalType::Sell { strength, reason } => {
+                println!("SELL: {} (strength: {:.3}, confidence: {:.2})", 
+                    reason, strength, signal.confidence);
+            }
+            SignalType::Hold { reason } => {
+                println!("HOLD: {}", reason);
+            }
+            _ => {}
         }
     }
     
@@ -41,21 +68,50 @@ fn vwap_intraday_strategy() -> Result<(), Box<dyn std::error::Error>> {
 #### 2. Pre-Market Preparation
 
 ```rust
-use formicax::{PreMarketAnalyzer, SessionVWAP};
+use formica_x::{
+    DataLoader,
+    trading::{VWAPCalculator, PerformanceMonitor, AlertGenerator}
+};
 
 fn pre_market_analysis() -> Result<(), Box<dyn std::error::Error>> {
-    let analyzer = PreMarketAnalyzer::new()
-        .data_sources(vec!["premarket", "futures", "global_markets"])
-        .analysis_timeout(Duration::from_secs(30));
+    // Load previous day's data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let previous_day_data = loader.load_csv()?;
     
-    // Quick analysis before market open
-    let analysis = analyzer.analyze_premarket()?;
+    // Calculate previous day VWAP
+    let mut vwap_calc = VWAPCalculator::session_based();
+    let previous_day_vwap = vwap_calc.calculate(&previous_day_data)?;
+    
+    // Create performance monitor for tracking
+    let mut monitor = PerformanceMonitor::new()
+        .track_vwap_deviations(true)
+        .track_volume_spikes(true)
+        .track_price_movements(true);
+    
+    // Create alert generator
+    let mut alert_gen = AlertGenerator::new()
+        .vwap_deviation_threshold(0.02)  // 2% VWAP deviation
+        .volume_spike_threshold(2.0)     // 2x average volume
+        .price_movement_threshold(0.01); // 1% price movement
+    
+    // Analyze previous day performance
+    let analysis = monitor.analyze_performance(&previous_day_data)?;
+    
+    // Generate pre-market alerts
+    let alerts = alert_gen.generate_alerts(&analysis)?;
     
     // Key levels for day trading
     println!("Key VWAP levels:");
-    println!("- Previous day VWAP: ${:.2}", analysis.previous_day_vwap);
-    println!("- Pre-market VWAP: ${:.2}", analysis.premarket_vwap);
-    println!("- Gap analysis: {:.2}%", analysis.gap_percentage);
+    println!("- Previous day VWAP: ${:.2}", previous_day_vwap.vwap);
+    println!("- Previous day volume: {:.0}", previous_day_vwap.total_volume);
+    println!("- Price range: ${:.2} - ${:.2}", 
+        previous_day_data.iter().map(|d| d.low).min().unwrap(),
+        previous_day_data.iter().map(|d| d.high).max().unwrap());
+    
+    // Display alerts
+    for alert in alerts {
+        println!("ALERT: {}", alert.message);
+    }
     
     Ok(())
 }
@@ -64,20 +120,62 @@ fn pre_market_analysis() -> Result<(), Box<dyn std::error::Error>> {
 #### 3. Intraday VWAP Tracking
 
 ```rust
-use formicax::{IntradayTracker, RealTimeVWAP};
+use formica_x::{
+    DataLoader,
+    trading::{VWAPCalculator, PerformanceMonitor, AlertGenerator}
+};
 
 fn intraday_tracking() -> Result<(), Box<dyn std::error::Error>> {
-    let tracker = IntradayTracker::new()
-        .update_frequency(Duration::from_millis(100))
-        .alert_threshold(0.02); // 2% deviation
+    // Load intraday data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let intraday_data = loader.load_csv()?;
+    
+    // Create VWAP calculator for incremental updates
+    let mut vwap_calc = VWAPCalculator::session_based();
+    
+    // Create performance monitor for real-time tracking
+    let mut monitor = PerformanceMonitor::new()
+        .track_vwap_deviations(true)
+        .track_volume_spikes(true)
+        .track_price_movements(true);
+    
+    // Create alert generator with custom thresholds
+    let mut alert_gen = AlertGenerator::new()
+        .vwap_deviation_threshold(0.02)  // 2% deviation
+        .volume_spike_threshold(2.0)     // 2x average volume
+        .price_movement_threshold(0.01); // 1% price movement
     
     // Real-time VWAP monitoring
-    for tick in real_time_data {
-        let vwap_update = tracker.update_vwap(tick)?;
+    for ohlcv in &intraday_data {
+        // Update VWAP incrementally
+        let vwap_result = vwap_calc.calculate_incremental(&[ohlcv.clone()])?;
         
-        if vwap_update.deviation > 0.02 {
-            println!("ALERT: Price {:.2}% from VWAP", vwap_update.deviation * 100);
+        // Update performance metrics
+        let performance = monitor.update_performance(ohlcv)?;
+        
+        // Check for alerts
+        let alerts = alert_gen.check_alerts(&performance)?;
+        
+        // Display alerts
+        for alert in alerts {
+            match alert.alert_type {
+                AlertType::VWAPDeviation { deviation } => {
+                    println!("VWAP ALERT: Price {:.2}% from VWAP", deviation * 100);
+                }
+                AlertType::VolumeSpike { multiplier } => {
+                    println!("VOLUME ALERT: {:.1}x average volume", multiplier);
+                }
+                AlertType::PriceMovement { change } => {
+                    println!("PRICE ALERT: {:.2}% price change", change * 100);
+                }
+                _ => {}
+            }
         }
+        
+        // Display current VWAP
+        println!("Time: {}, Price: ${:.2}, VWAP: ${:.2}, Deviation: {:.2}%",
+            ohlcv.timestamp, ohlcv.close, vwap_result.vwap,
+            ((ohlcv.close - vwap_result.vwap) / vwap_result.vwap) * 100.0);
     }
     
     Ok(())
@@ -204,6 +302,315 @@ fn market_making_strategy() -> Result<(), Box<dyn std::error::Error>> {
     // Place orders around VWAP
     place_bid_order(vwap - spread.bid_offset);
     place_ask_order(vwap + spread.ask_offset);
+    
+    Ok(())
+}
+```
+
+## Complete Trading Examples
+
+### Example 1: Complete VWAP Trading Strategy
+
+```rust
+use formica_x::{
+    DataLoader,
+    trading::{
+        VWAPCalculator, 
+        SignalGenerator, 
+        VWAPStrategy, 
+        StrategyConfig, 
+        VWAPType,
+        PerformanceMonitor,
+        AlertGenerator
+    }
+};
+
+fn complete_vwap_strategy() -> Result<(), Box<dyn std::error::Error>> {
+    // Load market data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let data = loader.load_csv()?;
+    
+    // Create comprehensive trading strategy
+    let config = StrategyConfig {
+        name: "Complete VWAP Strategy".to_string(),
+        vwap_type: VWAPType::Session,
+        max_position_size: 10000.0,
+        stop_loss_pct: 0.02,      // 2% stop loss
+        take_profit_pct: 0.04,    // 4% take profit
+        max_drawdown: 0.10,       // 10% max drawdown
+        risk_per_trade: 0.01,     // 1% risk per trade
+        ..Default::default()
+    };
+    
+    let mut strategy = VWAPStrategy::with_config(config);
+    
+    // Create performance monitor
+    let mut monitor = PerformanceMonitor::new()
+        .track_vwap_deviations(true)
+        .track_volume_spikes(true)
+        .track_price_movements(true)
+        .track_trade_performance(true);
+    
+    // Create alert generator
+    let mut alert_gen = AlertGenerator::new()
+        .vwap_deviation_threshold(0.02)
+        .volume_spike_threshold(2.0)
+        .price_movement_threshold(0.01);
+    
+    // Execute strategy
+    let signals = strategy.execute(&data)?;
+    
+    // Process signals and track performance
+    for signal in signals {
+        // Execute trade based on signal
+        match signal.signal_type {
+            SignalType::Buy { strength, reason } => {
+                println!("EXECUTING BUY: {} (strength: {:.3})", reason, strength);
+                // Simulate trade execution
+                let trade_result = execute_buy_trade(signal.price, signal.volume)?;
+                
+                // Update performance metrics
+                monitor.record_trade(&trade_result)?;
+            }
+            SignalType::Sell { strength, reason } => {
+                println!("EXECUTING SELL: {} (strength: {:.3})", reason, strength);
+                // Simulate trade execution
+                let trade_result = execute_sell_trade(signal.price, signal.volume)?;
+                
+                // Update performance metrics
+                monitor.record_trade(&trade_result)?;
+            }
+            SignalType::Hold { reason } => {
+                println!("HOLDING: {}", reason);
+            }
+            _ => {}
+        }
+        
+        // Check for alerts
+        let alerts = alert_gen.check_alerts(&monitor.get_current_performance()?)?;
+        for alert in alerts {
+            println!("ALERT: {}", alert.message);
+        }
+    }
+    
+    // Get final performance metrics
+    let performance = monitor.get_performance();
+    let metrics = performance.get_metrics();
+    
+    println!("\n=== STRATEGY PERFORMANCE ===");
+    println!("Total trades: {}", metrics.total_trades);
+    println!("Winning trades: {}", metrics.winning_trades);
+    println!("Losing trades: {}", metrics.losing_trades);
+    println!("Win rate: {:.2}%", metrics.win_rate * 100.0);
+    println!("Total P&L: ${:.2}", metrics.total_pnl);
+    println!("Max drawdown: {:.2}%", metrics.max_drawdown * 100.0);
+    println!("Sharpe ratio: {:.2}", metrics.sharpe_ratio);
+    println!("Profit factor: {:.2}", metrics.profit_factor);
+    
+    Ok(())
+}
+
+fn execute_buy_trade(price: f64, volume: f64) -> Result<TradeResult, Box<dyn std::error::Error>> {
+    // Simulate trade execution
+    Ok(TradeResult {
+        timestamp: chrono::Utc::now(),
+        trade_type: TradeType::Buy,
+        price,
+        volume,
+        commission: price * volume * 0.001, // 0.1% commission
+        slippage: price * volume * 0.0005,  // 0.05% slippage
+    })
+}
+
+fn execute_sell_trade(price: f64, volume: f64) -> Result<TradeResult, Box<dyn std::error::Error>> {
+    // Simulate trade execution
+    Ok(TradeResult {
+        timestamp: chrono::Utc::now(),
+        trade_type: TradeType::Sell,
+        price,
+        volume,
+        commission: price * volume * 0.001, // 0.1% commission
+        slippage: price * volume * 0.0005,  // 0.05% slippage
+    })
+}
+```
+
+### Example 2: Real-Time Trading System
+
+```rust
+use formica_x::{
+    DataLoader,
+    trading::{
+        VWAPCalculator,
+        SignalGenerator,
+        PerformanceMonitor,
+        AlertGenerator,
+        RealTimeProcessor
+    }
+};
+use std::time::Duration;
+
+fn real_time_trading_system() -> Result<(), Box<dyn std::error::Error>> {
+    // Create real-time processor
+    let mut processor = RealTimeProcessor::new()
+        .update_frequency(Duration::from_millis(100))
+        .buffer_size(1000)
+        .parallel_processing(true);
+    
+    // Create VWAP calculator
+    let mut vwap_calc = VWAPCalculator::session_based();
+    
+    // Create signal generator
+    let mut signal_gen = SignalGenerator::new();
+    
+    // Create performance monitor
+    let mut monitor = PerformanceMonitor::new()
+        .track_vwap_deviations(true)
+        .track_volume_spikes(true)
+        .track_price_movements(true);
+    
+    // Create alert generator
+    let mut alert_gen = AlertGenerator::new()
+        .vwap_deviation_threshold(0.02)
+        .volume_spike_threshold(2.0)
+        .price_movement_threshold(0.01);
+    
+    // Start real-time processing
+    processor.start_processing(|ohlcv| {
+        // Calculate VWAP incrementally
+        let vwap_result = vwap_calc.calculate_incremental(&[ohlcv.clone()])?;
+        
+        // Generate trading signal
+        let signal = signal_gen.generate_signal_incremental(ohlcv)?;
+        
+        // Update performance metrics
+        let performance = monitor.update_performance(ohlcv)?;
+        
+        // Check for alerts
+        let alerts = alert_gen.check_alerts(&performance)?;
+        
+        // Process alerts
+        for alert in alerts {
+            match alert.alert_type {
+                AlertType::VWAPDeviation { deviation } => {
+                    println!("VWAP ALERT: {:.2}% deviation", deviation * 100.0);
+                }
+                AlertType::VolumeSpike { multiplier } => {
+                    println!("VOLUME ALERT: {:.1}x average", multiplier);
+                }
+                AlertType::PriceMovement { change } => {
+                    println!("PRICE ALERT: {:.2}% change", change * 100.0);
+                }
+                _ => {}
+            }
+        }
+        
+        // Execute signal if actionable
+        if signal.is_actionable() {
+            match signal.signal_type {
+                SignalType::Buy { strength, reason } => {
+                    println!("BUY SIGNAL: {} (strength: {:.3})", reason, strength);
+                    // Execute buy order
+                }
+                SignalType::Sell { strength, reason } => {
+                    println!("SELL SIGNAL: {} (strength: {:.3})", reason, strength);
+                    // Execute sell order
+                }
+                _ => {}
+            }
+        }
+        
+        Ok(())
+    })?;
+    
+    Ok(())
+}
+```
+
+### Example 3: Backtesting with Performance Analysis
+
+```rust
+use formica_x::{
+    DataLoader,
+    trading::{
+        VWAPStrategy,
+        StrategyConfig,
+        VWAPType,
+        Backtester,
+        PerformanceAnalyzer
+    }
+};
+
+fn backtest_strategy() -> Result<(), Box<dyn std::error::Error>> {
+    // Load historical data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let data = loader.load_csv()?;
+    
+    // Create strategy configuration
+    let config = StrategyConfig {
+        name: "Backtest VWAP Strategy".to_string(),
+        vwap_type: VWAPType::Session,
+        max_position_size: 10000.0,
+        stop_loss_pct: 0.02,
+        take_profit_pct: 0.04,
+        max_drawdown: 0.10,
+        risk_per_trade: 0.01,
+        ..Default::default()
+    };
+    
+    let strategy = VWAPStrategy::with_config(config);
+    
+    // Create backtester
+    let mut backtester = Backtester::new()
+        .initial_capital(100000.0)
+        .commission_rate(0.001)  // 0.1% commission
+        .slippage_rate(0.0005)   // 0.05% slippage
+        .include_dividends(true)
+        .reinvest_profits(true);
+    
+    // Run backtest
+    let results = backtester.run(&strategy, &data)?;
+    
+    // Create performance analyzer
+    let analyzer = PerformanceAnalyzer::new();
+    let analysis = analyzer.analyze(&results)?;
+    
+    // Display comprehensive results
+    println!("\n=== BACKTEST RESULTS ===");
+    println!("Initial Capital: ${:.2}", results.initial_capital);
+    println!("Final Capital: ${:.2}", results.final_capital);
+    println!("Total Return: {:.2}%", results.total_return * 100.0);
+    println!("Annualized Return: {:.2}%", results.annualized_return * 100.0);
+    println!("Sharpe Ratio: {:.2}", results.sharpe_ratio);
+    println!("Sortino Ratio: {:.2}", results.sortino_ratio);
+    println!("Max Drawdown: {:.2}%", results.max_drawdown * 100.0);
+    println!("Calmar Ratio: {:.2}", results.calmar_ratio);
+    println!("Profit Factor: {:.2}", results.profit_factor);
+    println!("Total Trades: {}", results.total_trades);
+    println!("Win Rate: {:.2}%", results.win_rate * 100.0);
+    println!("Average Trade: ${:.2}", results.avg_trade);
+    println!("Best Trade: ${:.2}", results.best_trade);
+    println!("Worst Trade: ${:.2}", results.worst_trade);
+    println!("Average Win: ${:.2}", results.avg_win);
+    println!("Average Loss: ${:.2}", results.avg_loss);
+    println!("Largest Win: ${:.2}", results.largest_win);
+    println!("Largest Loss: ${:.2}", results.largest_loss);
+    println!("Consecutive Wins: {}", results.consecutive_wins);
+    println!("Consecutive Losses: {}", results.consecutive_losses);
+    
+    // Display monthly returns
+    println!("\n=== MONTHLY RETURNS ===");
+    for (month, return_pct) in &results.monthly_returns {
+        println!("{}: {:.2}%", month, return_pct * 100.0);
+    }
+    
+    // Display drawdown periods
+    println!("\n=== DRAWDOWN PERIODS ===");
+    for period in &results.drawdown_periods {
+        println!("{} to {}: {:.2}% ({:.0} days)",
+            period.start_date, period.end_date,
+            period.drawdown * 100.0, period.duration_days);
+    }
     
     Ok(())
 }
@@ -724,4 +1131,263 @@ fn performance_monitoring() -> Result<(), Box<dyn std::error::Error>> {
 - **Sortino Ratio**: Downside deviation adjusted returns
 - **Calmar Ratio**: Annual return / maximum drawdown
 
-This comprehensive trading guide ensures FormicaX delivers maximum value to traders with institutional-grade performance and reliability across all trading styles and timeframes. 
+This comprehensive trading guide ensures FormicaX delivers maximum value to traders with institutional-grade performance and reliability across all trading styles and timeframes.
+
+## 🎯 **Cursor Implementation Rules for Trading Features**
+
+### **MANDATORY Development Ethos for Trading Components**
+
+When implementing trading-specific features in FormicaX, **ALWAYS** follow these non-negotiable rules:
+
+#### **1. Code Coverage First (CRITICAL for Trading)**
+```bash
+# BEFORE implementing any trading feature:
+cargo tarpaulin --out Html --output-dir coverage
+
+# AFTER implementing:
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+```
+
+**Trading-Specific Coverage Requirements:**
+- [ ] **95% minimum coverage** for all trading algorithms
+- [ ] **100% coverage** for real-time processing paths
+- [ ] **Property-based tests** for all trading strategies
+- [ ] **Stress tests** for high-frequency scenarios
+- [ ] **Edge case tests** for market anomalies
+- [ ] **Performance regression tests** for latency-critical code
+
+#### **2. Stop and Review (ESSENTIAL for Trading)**
+After implementing any trading feature:
+
+**Trading Review Checklist:**
+- [ ] **Coverage Check**: `cargo tarpaulin --fail-under 95`
+- [ ] **Latency Validation**: `cargo bench` - sub-100 microsecond targets
+- [ ] **Memory Safety**: No unsafe code in trading paths
+- [ ] **Error Handling**: Comprehensive error recovery for market data
+- [ ] **Real-time Testing**: Simulate live market conditions
+- [ ] **Documentation**: Trading examples using `examples/csv/` data
+
+#### **3. Latest Dependencies (SECURITY for Trading)**
+```bash
+# Daily for trading components:
+cargo outdated
+cargo update
+cargo audit
+cargo check --all-features
+cargo test --all-features
+```
+
+**Trading Dependency Rules:**
+- [ ] **Latest stable versions** from crates.io
+- [ ] **Security audit** on every dependency update
+- [ ] **No pinned versions** in trading-critical paths
+- [ ] **Real-time compatibility** verification
+
+#### **4. Clean, Modular Trading Code**
+```rust
+// ✅ GOOD: Clean, testable, modular trading code
+pub trait TradingStrategy {
+    type Config;
+    fn execute(&self, market_data: &MarketData) -> Result<TradeSignal, TradingError>;
+    fn validate(&self, signal: &TradeSignal) -> ValidationResult;
+}
+
+// ✅ GOOD: Builder pattern for trading config
+let config = VWAPStrategyConfig::builder()
+    .timeframe(Timeframe::Minute(1))
+    .threshold(0.001)
+    .parallel(true)
+    .simd(true)
+    .build()?;
+
+// ❌ BAD: Inline trading logic, hard to test
+fn vwap_trading_inline(data: &[OHLCV]) -> Vec<TradeSignal> {
+    // 500 lines of inline trading logic
+}
+
+// ❌ BAD: Outdated dependencies in trading code
+[dependencies]
+tokio = "1.0"  # Pinned old version
+```
+
+### **Trading-Specific Quality Gates**
+
+**Every trading implementation must pass:**
+
+| Gate | Command | Target | Critical for Trading |
+|------|---------|--------|---------------------|
+| **Coverage** | `cargo tarpaulin` | > 95% | ✅ CRITICAL |
+| **Latency** | `cargo bench` | < 100μs | ✅ CRITICAL |
+| **Memory Safety** | `cargo clippy` | 0 unsafe | ✅ CRITICAL |
+| **Security** | `cargo audit` | 0 issues | ✅ CRITICAL |
+| **Real-time** | Custom tests | No blocking | ✅ CRITICAL |
+| **Market Data** | Integration tests | Valid OHLCV | ✅ CRITICAL |
+
+### **Trading Implementation Workflow**
+
+#### **Phase 1: Trading Strategy Design**
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+    
+    #[test]
+    fn test_vwap_strategy_basic() {
+        // Test with examples/csv/daily.csv data
+        let mut loader = DataLoader::new("examples/csv/daily.csv");
+        let data = loader.load_csv().unwrap();
+        
+        let strategy = VWAPStrategy::new(config);
+        let signals = strategy.execute(&data).unwrap();
+        
+        assert!(!signals.is_empty());
+        assert!(signals.iter().all(|s| s.is_valid()));
+    }
+    
+    proptest! {
+        #[test]
+        fn test_vwap_strategy_properties(market_data in generate_market_data()) {
+            // Property-based tests for trading logic
+            let strategy = VWAPStrategy::new(config);
+            let signals = strategy.execute(&market_data).unwrap();
+            
+            // Validate trading properties
+            assert!(validate_trading_properties(&signals));
+        }
+    }
+}
+```
+
+#### **Phase 2: Trading Implementation**
+```rust
+// Implement with clean, modular trading code
+pub struct VWAPStrategy {
+    config: VWAPStrategyConfig,
+    vwap_calculator: VWAPCalculator,
+    signal_generator: SignalGenerator,
+}
+
+impl TradingStrategy for VWAPStrategy {
+    type Config = VWAPStrategyConfig;
+    
+    fn execute(&self, market_data: &MarketData) -> Result<Vec<TradeSignal>, TradingError> {
+        // Clean, readable trading implementation
+        // Comprehensive error handling
+        // No code duplication
+        // Real-time performance optimized
+    }
+}
+```
+
+#### **Phase 3: Trading Validation**
+```bash
+# Run all trading quality checks
+cargo test --all-features
+cargo tarpaulin --fail-under 95
+cargo clippy --all-targets --all-features -- -D warnings
+cargo bench  # Verify latency targets
+cargo audit  # Security check
+```
+
+#### **Phase 4: Trading Documentation**
+```rust
+/// VWAP-based trading strategy
+/// 
+/// # Example
+/// ```rust
+/// use formica_x::{DataLoader, VWAPStrategy};
+/// 
+/// let mut loader = DataLoader::new("examples/csv/daily.csv");
+/// let data = loader.load_csv()?;
+/// let strategy = VWAPStrategy::new(config);
+/// let signals = strategy.execute(&data)?;
+/// ```
+pub struct VWAPStrategy {
+    // Implementation
+}
+```
+
+### **Trading-Specific Failure Recovery**
+
+#### **Trading Latency Regression**
+```bash
+# Identify performance issues
+cargo bench --bench trading_benchmarks
+
+# Profile trading code
+cargo install flamegraph
+cargo flamegraph --bench trading_benchmarks
+
+# Optimize until < 100μs
+cargo bench --bench trading_benchmarks
+```
+
+#### **Trading Coverage Below 95%**
+```bash
+# Identify uncovered trading code
+cargo tarpaulin --out Html --output-dir coverage
+
+# Add missing trading tests
+# Re-run until > 95%
+cargo tarpaulin --fail-under 95
+```
+
+#### **Trading Security Issues**
+```bash
+# Update dependencies
+cargo update
+
+# Security audit
+cargo audit
+
+# If security issues found, update immediately
+cargo update --aggressive
+cargo audit
+```
+
+### **Trading Development Tools**
+
+#### **Trading Pre-commit Hook**
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+set -e
+
+echo "Running trading pre-commit quality gates..."
+
+# Coverage check (CRITICAL for trading)
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+
+# Security audit (CRITICAL for trading)
+cargo audit
+
+# Code quality
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Trading-specific tests
+cargo test --test trading_tests
+cargo bench --bench trading_benchmarks
+
+echo "✅ All trading quality gates passed!"
+```
+
+#### **Trading Daily Routine**
+```bash
+# Start of trading day
+cargo update
+cargo audit
+cargo outdated
+
+# Before committing trading code
+cargo test --test trading_tests
+cargo tarpaulin --fail-under 95
+cargo clippy --all-targets --all-features -- -D warnings
+cargo bench --bench trading_benchmarks
+
+# End of trading day
+cargo doc --open
+```
+
+**Remember: These rules are MANDATORY for trading components. Every trading feature must follow this ethos to ensure institutional-grade reliability and performance.** 

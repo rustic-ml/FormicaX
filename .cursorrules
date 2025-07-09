@@ -1,0 +1,395 @@
+# FormicaX Cursor Rules
+# MANDATORY Development Ethos and Implementation Standards
+
+## 🎯 **PROJECT ETHOS ENFORCEMENT**
+
+When implementing ANY feature or component in FormicaX, **ALWAYS** follow these MANDATORY rules:
+
+### **1. CODE COVERAGE FIRST (MANDATORY)**
+
+```bash
+# BEFORE implementing any feature:
+cargo tarpaulin --out Html --output-dir coverage
+
+# AFTER implementing:
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+```
+
+**Implementation Checklist:**
+- [ ] Write unit tests BEFORE implementing the feature
+- [ ] Add integration tests for public APIs
+- [ ] Include property-based tests with `proptest`
+- [ ] Test all error conditions and edge cases
+- [ ] Verify coverage > 95% for new code
+- [ ] Add benchmarks for performance-critical code
+
+### **2. STOP AND REVIEW (MANDATORY)**
+
+After implementing any significant feature:
+
+**Review Checklist:**
+- [ ] **Code Coverage**: Run `cargo tarpaulin` and verify > 95%
+- [ ] **No Duplication**: Check for code duplication using `cargo clippy`
+- [ ] **Modularity**: Ensure clean separation of concerns
+- [ ] **Readability**: Code is self-documenting with clear naming
+- [ ] **Performance**: Run benchmarks and verify no regressions
+- [ ] **Documentation**: Update examples and documentation
+- [ ] **Formatting**: Run `cargo fmt` and ensure all code is formatted
+- [ ] **Linting**: Run `cargo clippy --all-targets --all-features -- -D warnings` and ensure zero warnings
+
+### **3. LATEST DEPENDENCIES (MANDATORY)**
+
+```bash
+# Check for outdated dependencies
+cargo outdated
+
+# Update to latest versions
+cargo update
+
+# Verify compatibility
+cargo check --all-features
+cargo test --all-features
+```
+
+**Dependency Rules:**
+- [ ] Use latest stable versions from crates.io
+- [ ] No pinned versions unless absolutely necessary
+- [ ] Regular dependency updates (weekly)
+- [ ] Security audit: `cargo audit`
+- [ ] Verify no breaking changes after updates
+
+### **4. CLEAN, MODULAR CODE (MANDATORY)**
+
+**Code Quality Standards:**
+```rust
+// ✅ GOOD: Clean, modular, testable
+pub trait ClusteringAlgorithm {
+    type Config;
+    fn fit(&mut self, data: &[OHLCV]) -> Result<ClusterResult, FormicaXError>;
+}
+
+// ✅ GOOD: Builder pattern for configuration
+pub struct KMeansConfig {
+    k: usize,
+    variant: KMeansVariant,
+    parallel: bool,
+}
+
+impl KMeansConfig {
+    pub fn builder() -> KMeansConfigBuilder {
+        KMeansConfigBuilder::default()
+    }
+}
+
+// ❌ BAD: Duplicated code, hard to test
+fn kmeans_algorithm(data: &[OHLCV], k: usize) -> Vec<usize> {
+    // 100 lines of inline algorithm
+}
+
+// ❌ BAD: Outdated dependencies
+[dependencies]
+serde = "1.0.100"  # Pinned old version
+```
+
+**Modularity Rules:**
+- [ ] **Single Responsibility**: Each module has one clear purpose
+- [ ] **Dependency Inversion**: Depend on abstractions, not concretions
+- [ ] **Interface Segregation**: Small, focused traits
+- [ ] **Open/Closed**: Open for extension, closed for modification
+- [ ] **DRY Principle**: No code duplication
+- [ ] **SOLID Principles**: Follow all SOLID design principles
+
+## 🔄 **IMPLEMENTATION WORKFLOW**
+
+### **Phase 1: Planning**
+1. **Define Requirements**: Clear, testable requirements
+2. **Design Interface**: Define traits and public APIs
+3. **Plan Tests**: Write test specifications first
+4. **Check Dependencies**: Ensure latest versions
+
+### **Phase 2: Implementation**
+1. **Write Tests First**: TDD approach
+2. **Implement Feature**: Following clean code principles
+3. **Run Coverage**: Verify > 95% coverage
+4. **Run `cargo fmt` and `cargo clippy`**: Ensure code is formatted and warning-free
+5. **Code Review**: Self-review against checklist
+
+### **Phase 3: Validation**
+1. **Run All Tests**: `cargo test --all-features`
+2. **Check Coverage**: `cargo tarpaulin`
+3. **Run Benchmarks**: `cargo bench`
+4. **Update Dependencies**: `cargo update`
+5. **Security Audit**: `cargo audit`
+
+### **Phase 4: Documentation**
+1. **Update Examples**: Add working examples using `examples/csv/`
+2. **Update Documentation**: Keep docs in sync with code
+3. **Performance Notes**: Document performance characteristics
+4. **Migration Guide**: If breaking changes
+
+## 🛠️ **DEVELOPMENT TOOLS CONFIGURATION**
+
+### **Pre-commit Hooks**
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+echo "Running pre-commit checks..."
+
+# Check code coverage
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+
+# Check for outdated dependencies
+cargo outdated --exit-code 1
+
+# Run security audit
+cargo audit
+
+# Check code quality
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Run tests
+cargo test --all-features
+
+echo "All checks passed!"
+```
+
+### **CI/CD Pipeline**
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      # Check for outdated dependencies
+      - name: Check outdated dependencies
+        run: cargo outdated --exit-code 1
+      
+      # Security audit
+      - name: Security audit
+        run: cargo audit
+      
+      # Run tests with coverage
+      - name: Test with coverage
+        run: cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+      
+      # Upload coverage report
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage/tarpaulin-report.html
+```
+
+## 📊 **QUALITY METRICS DASHBOARD**
+
+**Required Metrics for Every Implementation:**
+
+| Metric | Target | Tool | Frequency |
+|--------|--------|------|-----------|
+| **Code Coverage** | > 95% | `cargo tarpaulin` | Every commit |
+| **Dependency Freshness** | Latest stable | `cargo outdated` | Weekly |
+| **Security Issues** | 0 | `cargo audit` | Every commit |
+| **Code Quality** | 0 warnings | `cargo clippy` | Every commit |
+| **Performance** | No regression | `cargo bench` | Every PR |
+| **Documentation** | 100% API coverage | Manual review | Every PR |
+
+## 🚨 **FAILURE MODES AND RECOVERY**
+
+### **Coverage Below 95%**
+```bash
+# Identify uncovered code
+cargo tarpaulin --out Html --output-dir coverage
+
+# Add missing tests
+# Re-run until > 95%
+cargo tarpaulin --out Html --output-dir coverage --fail-under 95
+```
+
+### **Outdated Dependencies**
+```bash
+# Update dependencies
+cargo update
+
+# Check for breaking changes
+cargo check --all-features
+cargo test --all-features
+
+# If breaking changes, update code or pin version temporarily
+```
+
+### **Code Duplication**
+```bash
+# Use clippy to detect duplication
+cargo clippy --all-targets --all-features
+
+# Refactor duplicated code into shared modules
+# Update tests to cover shared code
+```
+
+## 📝 **IMPLEMENTATION TEMPLATES**
+
+### **New Clustering Algorithm**
+```rust
+// 1. Define trait implementation
+impl ClusteringAlgorithm for NewAlgorithm {
+    type Config = NewAlgorithmConfig;
+    
+    fn new(config: Self::Config) -> Self {
+        // Implementation
+    }
+    
+    fn fit(&mut self, data: &[OHLCV]) -> Result<ClusterResult, FormicaXError> {
+        // Implementation with comprehensive error handling
+    }
+}
+
+// 2. Write tests FIRST
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+    
+    #[test]
+    fn test_new_algorithm_basic() {
+        // Test implementation
+    }
+    
+    proptest! {
+        #[test]
+        fn test_new_algorithm_properties(data in generate_test_data()) {
+            // Property-based tests
+        }
+    }
+}
+
+// 3. Add benchmarks
+#[cfg(test)]
+mod benches {
+    use criterion::{black_box, criterion_group, criterion_main, Criterion};
+    
+    fn bench_new_algorithm(c: &mut Criterion) {
+        c.bench_function("new_algorithm", |b| {
+            b.iter(|| {
+                // Benchmark implementation
+            })
+        });
+    }
+}
+```
+
+### **New Module Structure**
+```
+src/clustering/new_algorithm/
+├── mod.rs              # Public API and trait implementations
+├── algorithm.rs        # Core algorithm implementation
+├── config.rs           # Configuration and builder pattern
+├── parallel.rs         # Parallel implementation (if applicable)
+└── tests/              # Comprehensive test suite
+    ├── mod.rs
+    ├── unit_tests.rs
+    ├── integration_tests.rs
+    └── property_tests.rs
+```
+
+## 🎯 **TRADING-SPECIFIC RULES**
+
+### **Trading Implementation Requirements**
+- [ ] **95% minimum coverage** for all trading algorithms
+- [ ] **100% coverage** for real-time processing paths
+- [ ] **Sub-100 microsecond latency** for trading operations
+- [ ] **Zero unsafe code** in trading paths
+- [ ] **Daily security audits** for trading components
+- [ ] **Real-time testing** with market condition simulation
+
+### **Trading Quality Gates**
+| Gate | Command | Target | Critical for Trading |
+|------|---------|--------|---------------------|
+| **Coverage** | `cargo tarpaulin` | > 95% | ✅ CRITICAL |
+| **Latency** | `cargo bench` | < 100μs | ✅ CRITICAL |
+| **Memory Safety** | `cargo clippy` | 0 unsafe | ✅ CRITICAL |
+| **Security** | `cargo audit` | 0 issues | ✅ CRITICAL |
+| **Real-time** | Custom tests | No blocking | ✅ CRITICAL |
+| **Market Data** | Integration tests | Valid OHLCV | ✅ CRITICAL |
+
+## 🔧 **PERFORMANCE OPTIMIZATION RULES**
+
+### **SIMD and Vectorization**
+- [ ] Use AVX2/AVX-512 instructions for 8x-16x speedup
+- [ ] Ensure data structures are aligned to cache lines
+- [ ] Use FMA operations for improved precision
+- [ ] Implement portable SIMD with fallbacks
+
+### **Memory Management**
+- [ ] Use zero-copy operations where possible
+- [ ] Implement memory pooling for repeated operations
+- [ ] Use Structure-of-Arrays (SoA) layout for cache locality
+- [ ] Stream large datasets without loading into memory
+
+### **Parallel Processing**
+- [ ] Use work-stealing algorithms for load balancing
+- [ ] Implement lock-free data structures
+- [ ] Optimize for NUMA-aware systems
+- [ ] Use parallel iterators for zero-cost abstractions
+
+## 📚 **DOCUMENTATION REQUIREMENTS**
+
+### **Code Documentation**
+- [ ] All public APIs must have comprehensive documentation
+- [ ] Include working examples using `examples/csv/` data
+- [ ] Document performance characteristics and trade-offs
+- [ ] Provide migration guides for breaking changes
+
+### **Example Requirements**
+- [ ] All examples must use CSV files from `examples/csv/` folder
+- [ ] Every public API must have at least one working example
+- [ ] Include error handling examples
+- [ ] Show performance considerations where applicable
+
+## 🚀 **DEPLOYMENT AND RELEASE RULES**
+
+### **Release Checklist**
+- [ ] All tests pass: `cargo test --all-features`
+- [ ] Coverage > 95%: `cargo tarpaulin --fail-under 95`
+- [ ] No security issues: `cargo audit`
+- [ ] Dependencies up to date: `cargo outdated`
+- [ ] Performance benchmarks pass: `cargo bench`
+- [ ] Documentation complete and accurate
+- [ ] Examples tested and working
+
+### **Version Management**
+- [ ] Follow semantic versioning (SemVer)
+- [ ] Update CHANGELOG.md for all changes
+- [ ] Tag releases with descriptive messages
+- [ ] Maintain backward compatibility when possible
+
+## ⚠️ **MANDATORY COMPLIANCE**
+
+**These rules are MANDATORY and non-negotiable. Every implementation must follow this ethos to maintain the high quality standards of FormicaX.**
+
+### **Enforcement**
+- [ ] Pre-commit hooks must pass all quality gates
+- [ ] CI/CD pipeline enforces all rules automatically
+- [ ] Code reviews must verify compliance
+- [ ] No exceptions without documented justification
+
+### **Consequences of Non-Compliance**
+- [ ] Pull requests will be rejected
+- [ ] Builds will fail in CI/CD
+- [ ] Code will not be merged to main branch
+- [ ] Releases will be blocked
+
+**Remember: Quality is not negotiable. Every line of code must follow these standards to maintain FormicaX's reputation for excellence.**
+
+### **MANDATORY Cleanliness and Code Quality Enforcement**
+
+- [ ] Run `cargo fmt` to ensure code is properly formatted before every commit and before merging.
+- [ ] Run `cargo clippy --all-targets --all-features -- -D warnings` to ensure zero warnings and enforce code cleanliness before every commit and before merging. 

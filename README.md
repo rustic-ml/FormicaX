@@ -28,6 +28,7 @@ FormicaX processes large datasets efficiently, making it suitable for real-time 
 ## Features
 
 - **High Performance**: Built in Rust for speed and memory safety, optimized for large OHLCV datasets.
+- **Advanced Trading**: VWAP-based strategies, real-time signal generation, and performance monitoring.
 - **Flexible Input**: Supports OHLCV data in CSV, JSON, or custom formats via a configurable data loader.
 - **Multiple Algorithms**: Implements six clustering algorithms for diverse analytical approaches.
 - **Customizable Parameters**: Fine-tune algorithm hyperparameters for specific trading strategies.
@@ -66,7 +67,7 @@ FormicaX processes large datasets efficiently, making it suitable for real-time 
 
 ## Usage
 
-### Basic Example
+### Basic Clustering Example
 Cluster OHLCV data using K-Means and generate predictions:
 
 ```rust
@@ -92,6 +93,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (i, cluster) in predictions.iter().enumerate() {
         println!("Data point {} belongs to cluster {}", i, cluster);
     }
+
+    Ok(())
+}
+```
+
+### Trading Strategy Example
+Implement a VWAP-based trading strategy:
+
+```rust
+use formica_x::{
+    DataLoader, 
+    trading::{VWAPCalculator, SignalGenerator, VWAPStrategy, StrategyConfig}
+};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load market data
+    let mut loader = DataLoader::new("examples/csv/daily.csv");
+    let data = loader.load_csv()?;
+
+    // Create VWAP-based trading strategy
+    let config = StrategyConfig {
+        name: "VWAP Strategy".to_string(),
+        vwap_type: VWAPType::Session,
+        max_position_size: 10000.0,
+        stop_loss_pct: 0.02,  // 2% stop loss
+        take_profit_pct: 0.04, // 4% take profit
+        ..Default::default()
+    };
+
+    let mut strategy = VWAPStrategy::with_config(config);
+
+    // Execute strategy on historical data
+    let signals = strategy.execute(&data)?;
+
+    // Process trading signals
+    for signal in signals {
+        match signal.signal_type {
+            SignalType::Buy { strength, reason } => {
+                println!("BUY: {} (confidence: {:.2})", reason, signal.confidence);
+            }
+            SignalType::Sell { strength, reason } => {
+                println!("SELL: {} (confidence: {:.2})", reason, signal.confidence);
+            }
+            SignalType::Hold { reason } => {
+                println!("HOLD: {}", reason);
+            }
+            _ => {}
+        }
+    }
+
+    // Get performance metrics
+    let performance = strategy.get_performance();
+    let metrics = performance.get_metrics();
+    println!("Total trades: {}", metrics.total_trades);
+    println!("Win rate: {:.2}%", metrics.win_rate * 100.0);
+    println!("Total P&L: ${:.2}", metrics.total_pnl);
 
     Ok(())
 }
@@ -138,8 +195,10 @@ See [API documentation](#api-documentation) for details.
 - **Affinity Propagation**: Exploratory analysis without predefined cluster counts.
 - **Self-Organizing Maps (SOM)**: Visualizes patterns via 2D mapping.
 
-## Building a Trading Strategy
-Integrate [FormicaX](https://github.com/rustic-ml/FormicaX) into a trading pipeline:
+## Building Trading Strategies
+
+### Clustering-Based Strategy
+Integrate clustering algorithms into a trading pipeline:
 1. **Preprocess**: Normalize data using `Preprocessor`.
 2. **Cluster**: Apply clustering algorithms.
 3. **Predict**: Assign new data to clusters.
@@ -153,6 +212,35 @@ if clusters[0] == 1 {
     println!("Buy signal: Cluster 1 indicates upward trend.");
 } else if clusters[0] == 2 {
     println!("Sell signal: Cluster 2 indicates downward trend.");
+}
+```
+
+### VWAP-Based Strategy
+Use VWAP (Volume Weighted Average Price) for real-time trading:
+
+```rust
+use formica_x::trading::{VWAPCalculator, SignalGenerator};
+
+// Create VWAP calculator
+let mut vwap_calc = VWAPCalculator::session_based();
+
+// Create signal generator
+let mut signal_gen = SignalGenerator::new();
+
+// Process real-time data
+for ohlcv in real_time_data {
+    // Calculate VWAP incrementally
+    let vwap_result = vwap_calc.calculate_incremental(&[ohlcv.clone()])?;
+    
+    // Generate trading signal
+    let signal = signal_gen.generate_signal_incremental(&ohlcv)?;
+    
+    // Execute based on signal
+    match signal.signal_type {
+        SignalType::Buy { .. } => execute_buy_order(ohlcv.close),
+        SignalType::Sell { .. } => execute_sell_order(ohlcv.close),
+        _ => {}
+    }
 }
 ```
 
